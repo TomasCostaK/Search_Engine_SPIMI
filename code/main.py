@@ -219,4 +219,5 @@ if __name__ == "__main__":
     rtli.rank(analyze_table, tokenizer_mode)
     toc = time.time()
 
+    #work nº3 calls
     rtli.write_index_file()

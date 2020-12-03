@@ -14,20 +14,25 @@ class Indexer:
             # Desagragate tuple
             term = token[0]
             idx = token[1]
+            position = token[2]
 
             if term not in self.indexed_words.keys():
-                self.indexed_words[term] = { 'doc_ids': { idx : 1 }, 'idf': None, 'doc_freq': 1, 'col_freq': 1}
+                self.indexed_words[term] = { 'doc_ids': { idx : { 'weight' : 1 , 'positions' : set(position) }}, 'idf': None, 'doc_freq': 1, 'col_freq': 1}
             else:
                 # get the dictionary that is a value of term
                 value_dict = self.indexed_words[term]['doc_ids']
                 if idx not in value_dict.keys():
-                    value_dict[idx] = 1
+                    value_dict[idx] = { 'weight' : 1 , 'positions' : set(position) }
                     self.indexed_words[term]['doc_freq'] += 1
                     self.indexed_words[term]['col_freq'] += 1
                 else:
-                    value_dict[idx] += 1
+                    value_dict[idx]['weight'] += 1
+                    value_dict[idx]['positions'].append(position)
                     self.indexed_words[term]['col_freq'] += 1
                 self.indexed_words[term]['doc_ids'] = value_dict
+            
+            if term == 'zika':
+                print("term zika in %s already in position: %d" % (idx, position))
 
     def index_query(self,tokens):
         indexed_query = {}

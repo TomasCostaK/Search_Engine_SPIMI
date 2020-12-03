@@ -18,6 +18,7 @@ class Tokenizer:
         # we do the simple tokenizer
         if self.tokenizer_mode == "simple":
             tokens = re.sub("[^a-zA-Z]+"," ",input_string).lower().split(" ")
+            tokens = [ (token, tokens.index(token)) for token in tokens ]
 
         # we go into the complex tokenizer
         else:
@@ -30,10 +31,10 @@ class Tokenizer:
         # Iterate over each word in line 
         for token in tokens: 
             # Disregard words with less than 3 chars, or if they are a stopword
-            if len(token)<3 or token in self.stopwords: 
+            if len(token[0])<3 or token[0] in self.stopwords: 
                 continue
 
             # if it passes the condition, we shall add it to the final_tokens
-            final_tokens.append((token,index))
-        
+            final_tokens.append((token[0],index, token[1])) #token 1 represents its position
+
         return final_tokens
