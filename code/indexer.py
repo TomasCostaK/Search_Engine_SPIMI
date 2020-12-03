@@ -17,17 +17,18 @@ class Indexer:
             position = token[2]
 
             if term not in self.indexed_words.keys():
-                self.indexed_words[term] = { 'doc_ids': { idx : { 'weight' : 1 , 'positions' : set([position]) }}, 'idf': None, 'doc_freq': 1, 'col_freq': 1}
+                self.indexed_words[term] = { 'doc_ids': { idx : { 'weight' : 1 , 'positions' : [position] }}, 'idf': None, 'doc_freq': 1, 'col_freq': 1}
             else:
                 # get the dictionary that is a value of term
                 value_dict = self.indexed_words[term]['doc_ids']
                 if idx not in value_dict.keys():
-                    value_dict[idx] = { 'weight' : 1 , 'positions' : set([position]) }
+                    value_dict[idx] = { 'weight' : 1 , 'positions' : [position] }
                     self.indexed_words[term]['doc_freq'] += 1
                     self.indexed_words[term]['col_freq'] += 1
                 else:
+                    #already shows up this document
                     value_dict[idx]['weight'] += 1
-                    value_dict[idx]['positions'].add(position)
+                    value_dict[idx]['positions'].append(position)
                     self.indexed_words[term]['col_freq'] += 1
                 self.indexed_words[term]['doc_ids'] = value_dict
 

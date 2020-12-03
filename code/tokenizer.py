@@ -18,7 +18,7 @@ class Tokenizer:
         # we do the simple tokenizer
         if self.tokenizer_mode == "simple":
             tokens = re.sub("[^a-zA-Z]+"," ",input_string).lower().split(" ")
-            tokens = [ (token, tokens.index(token)) for token in tokens ]
+            tokens = [ (tokens[i],i) for i in range(0,len(tokens)) ]
 
         # we go into the complex tokenizer
         else:
