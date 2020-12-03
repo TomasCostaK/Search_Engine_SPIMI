@@ -215,9 +215,9 @@ if __name__ == "__main__":
     rtli.domain_questions(toc-tic)
 
     # work nº2 calls
-    #tic = time.time()
-    #rtli.rank(analyze_table, tokenizer_mode)
-    #toc = time.time()
+    tic = time.time()
+    rtli.rank(analyze_table, tokenizer_mode)
+    toc = time.time()
 
     #work nº3 calls
     rtli.write_index_file()

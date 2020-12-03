@@ -119,7 +119,8 @@ class Ranker:
             weight_query_term = tf_weight * idf #this is the weight for the term in the query
 
             # now we iterate over every term
-            for doc_id, tf_doc in self.indexed_map[term]['doc_ids'].items():
+            for doc_id, doc_id_dict in self.indexed_map[term]['doc_ids'].items():
+                tf_doc = doc_id_dict['weight']
                 tf_doc_weight = math.log10(tf_doc) + 1
                 
                 #added step for normalization
@@ -155,7 +156,8 @@ class Ranker:
             idf = self.indexed_map[term]['idf']
 
             # now we iterate over every term
-            for doc_id, tf_doc in self.indexed_map[term]['doc_ids'].items():
+            for doc_id, doc_id_dict in self.indexed_map[term]['doc_ids'].items():
+                tf_doc = doc_id_dict['weight']
                 dl = self.docs_length[doc_id]
                 score = self.calculate_BM25(df, dl, self.avdl, tf_doc)
                 best_docs[doc_id] += idf * score 
