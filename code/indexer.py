@@ -16,6 +16,7 @@ class Indexer:
             idx = token[1]
             position = token[2]
 
+
             if term not in self.indexed_words.keys():
                 self.indexed_words[term] = { 'doc_ids': { idx : { 'weight' : 1 , 'positions' : [position] }}, 'idf': None, 'doc_freq': 1, 'col_freq': 1}
             else:
@@ -43,3 +44,12 @@ class Indexer:
             else:
                 indexed_query[term] += 1
         return indexed_query
+
+    # function to write indexed terms to file, in a similar output to the one requested
+    def write_index_file(self, file_output='../output/indexed_map.txt'):
+        print(self.indexed_words['organisms'])
+        with open(file_output,'w+') as f:
+            for term, value in self.indexed_words.items():
+                if term == 'organisms': 
+                    string = term + ": " +  str(value['idf']) + '; ' +  str(value['doc_ids']) + '\n'
+                    f.write(string)

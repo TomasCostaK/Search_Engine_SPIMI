@@ -75,8 +75,8 @@ class RTLI:  # Reader, tokenizer, linguistic, indexer
 
     def rank(self, analyze_table, tokenizer_mode):
         self.updateIdfs()
-        self.ranker.update(self.docs_length, self.collection_size, self.indexed_map, tokenizer_mode, "../content/snowball_stopwords_EN.txt")
-        self.ranker.process_queries(analyze_table=analyze_table)
+        #self.ranker.update(self.docs_length, self.collection_size, self.indexed_map, tokenizer_mode, "../content/snowball_stopwords_EN.txt")
+        #self.ranker.process_queries(analyze_table=analyze_table)
 
     # we call this extra step, so every term has an idf
     def updateIdfs(self):
@@ -85,13 +85,8 @@ class RTLI:  # Reader, tokenizer, linguistic, indexer
             self.indexed_map[term]['idf'] = idf
 
 
-    # function to write indexed terms to file, in a similar output to the one requested
-    def write_index_file(self, file_output='../output/indexed_map.txt'):
-        with open(file_output,'w+') as f:
-            for term, value in self.indexed_map.items(): 
-                string = term + ": " +  str(value['idf']) + '; ' +  str(value['doc_ids']) + '\n'
-                f.write(string)
-
+    def write_index_file(self):
+        self.indexer.write_index_file()
 
     # Questions being asked in work nº1
     def domain_questions(self, time):
