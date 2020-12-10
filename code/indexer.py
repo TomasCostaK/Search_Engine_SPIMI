@@ -47,7 +47,6 @@ class Indexer:
 
     # function to write indexed terms to file, in a similar output to the one requested
     def write_index_file(self, file_output='../output/indexed_map.txt'):
-        print(self.indexed_words['organisms'])
         with open(file_output,'w+') as f:
             for term, value in self.indexed_words.items():
                 if term == 'organisms': 
