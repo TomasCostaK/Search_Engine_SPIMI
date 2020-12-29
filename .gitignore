@@ -1,2 +1,2 @@
 output/*.txt
-metadata.csv
+*metadata.csv

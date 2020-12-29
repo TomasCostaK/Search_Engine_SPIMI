@@ -18,7 +18,7 @@ Tomás Costa - 89016
 """
 
 class RTLI:  # Reader, tokenizer, linguistic, indexer
-    def __init__(self, tokenizer_mode, file='../content/metadata.csv', stopwords_file="../content/snowball_stopwords_EN.txt", chunksize=400000, queries_path='../content/queries.txt' ,rank_mode='bm25', docs_limit=50):
+    def __init__(self, tokenizer_mode, file='../content/small_metadata.csv', stopwords_file="../content/snowball_stopwords_EN.txt", chunksize=400000, queries_path='../content/queries.txt' ,rank_mode='bm25', docs_limit=50):
         self.tokenizer = Tokenizer(tokenizer_mode, stopwords_file)
         self.indexer = Indexer()
         self.ranker = Ranker(queries_path=queries_path ,mode=rank_mode,docs_limit=docs_limit)
@@ -54,7 +54,6 @@ class RTLI:  # Reader, tokenizer, linguistic, indexer
         # We passed the reader to here, so we could do reading chunk by chunk
         with open(self.file, newline='', encoding="utf-8") as csvfile:
             reader = csv.DictReader(csvfile)
-            x_times = 0
             for chunk in self.gen_chunks(reader):
                 for row in chunk:
                     index = row['cord_uid']
@@ -69,8 +68,6 @@ class RTLI:  # Reader, tokenizer, linguistic, indexer
                 #print("Estimated tokenizing/stemming time: %.4fs" % (toc-tic)) #useful for debugging
 
                 self.indexer.index(tokens, index)
-                x_times += 1
-                print("we indexed %d times" % (x_times))
                 #print("Estimated indexing time: %.4fs" % (toc-tic)) #useful for debugging
 
         self.indexed_map = self.indexer.getIndexed()

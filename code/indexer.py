@@ -49,6 +49,5 @@ class Indexer:
     def write_index_file(self, file_output='../output/indexed_map.txt'):
         with open(file_output,'w+') as f:
             for term, value in self.indexed_words.items():
-                if term == 'organisms': 
-                    string = term + ": " +  str(value['idf']) + '; ' +  str(value['doc_ids']) + '\n'
-                    f.write(string)
+                string = term + ": " +  str(value['idf']) + '; ' +  str(value['doc_ids']) + '\n'
+                f.write(string)
