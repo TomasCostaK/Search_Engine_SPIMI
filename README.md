@@ -9,6 +9,9 @@ You need to install the requirements with pip:
     pip install -r requirements.txt
 ```
 
+### Dataset
+	https://ai2-semanticscholar-cord-19.s3-us-west-2.amazonaws.com/2020-12-01/metadata.csv
+
 ## How to Run
 ```python
     cd code
