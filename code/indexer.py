@@ -2,13 +2,14 @@ import re
 import pandas as pd
 
 class Indexer:
-    def __init__(self,initial_structure={}):
+    def __init__(self,initial_structure={},positional_flag=False):
         self.indexed_words = initial_structure
+        self.positional_flag = positional_flag
     
     def getIndexed(self):
         return self.indexed_words
 
-    def index(self,tokens, idx):
+    def index(self,tokens, idx, positional_flag):
 
         for token in tokens:
             # Desagragate tuple
@@ -16,22 +17,37 @@ class Indexer:
             idx = token[1]
             position = token[2]
 
-
-            if term not in self.indexed_words.keys():
-                self.indexed_words[term] = { 'doc_ids': { idx : { 'weight' : 1 , 'positions' : [position] }}, 'idf': None, 'doc_freq': 1, 'col_freq': 1}
-            else:
-                # get the dictionary that is a value of term
-                value_dict = self.indexed_words[term]['doc_ids']
-                if idx not in value_dict.keys():
-                    value_dict[idx] = { 'weight' : 1 , 'positions' : [position] }
-                    self.indexed_words[term]['doc_freq'] += 1
-                    self.indexed_words[term]['col_freq'] += 1
+            if self.positional_flag == True:
+                if term not in self.indexed_words.keys():
+                    self.indexed_words[term] = { 'doc_ids': { idx : { 'weight' : 1 , 'positions' : [position] }}, 'idf': None, 'doc_freq': 1, 'col_freq': 1}
                 else:
-                    #already shows up this document
-                    value_dict[idx]['weight'] += 1
-                    value_dict[idx]['positions'].append(position)
-                    self.indexed_words[term]['col_freq'] += 1
-                self.indexed_words[term]['doc_ids'] = value_dict
+                    # get the dictionary that is a value of term
+                    value_dict = self.indexed_words[term]['doc_ids']
+                    if idx not in value_dict.keys():
+                        value_dict[idx] = { 'weight' : 1 , 'positions' : [position] }
+                        self.indexed_words[term]['doc_freq'] += 1
+                        self.indexed_words[term]['col_freq'] += 1
+                    else:
+                        #already shows up this document
+                        value_dict[idx]['weight'] += 1
+                        value_dict[idx]['positions'].append(position)
+                        self.indexed_words[term]['col_freq'] += 1
+                    self.indexed_words[term]['doc_ids'] = value_dict
+            else:
+                if term not in self.indexed_words.keys():
+                    self.indexed_words[term] = { 'doc_ids': { idx : { 'weight' : 1 }}, 'idf': None, 'doc_freq': 1, 'col_freq': 1}
+                else:
+                    # get the dictionary that is a value of term
+                    value_dict = self.indexed_words[term]['doc_ids']
+                    if idx not in value_dict.keys():
+                        value_dict[idx] = { 'weight' : 1 }
+                        self.indexed_words[term]['doc_freq'] += 1
+                        self.indexed_words[term]['col_freq'] += 1
+                    else:
+                        #already shows up this document
+                        value_dict[idx]['weight'] += 1
+                        self.indexed_words[term]['col_freq'] += 1
+                    self.indexed_words[term]['doc_ids'] = value_dict
 
     def index_query(self,tokens):
         indexed_query = {}

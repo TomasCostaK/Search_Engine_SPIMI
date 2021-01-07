@@ -18,9 +18,9 @@ Tomás Costa - 89016
 """
 
 class RTLI:  # Reader, tokenizer, linguistic, indexer
-    def __init__(self, tokenizer_mode, file='../content/small_metadata.csv', stopwords_file="../content/snowball_stopwords_EN.txt", chunksize=400000, queries_path='../content/queries.txt' ,rank_mode='bm25', docs_limit=50):
+    def __init__(self, tokenizer_mode, file='../content/metadata_small.csv', stopwords_file="../content/snowball_stopwords_EN.txt", chunksize=400000, queries_path='../content/queries.txt' ,rank_mode='bm25', docs_limit=50, positional_flag=False):
         self.tokenizer = Tokenizer(tokenizer_mode, stopwords_file)
-        self.indexer = Indexer()
+        self.indexer = Indexer(positional_flag=positional_flag)
         self.ranker = Ranker(queries_path=queries_path ,mode=rank_mode,docs_limit=docs_limit)
         self.file = file
 
@@ -67,15 +67,15 @@ class RTLI:  # Reader, tokenizer, linguistic, indexer
             
                 #print("Estimated tokenizing/stemming time: %.4fs" % (toc-tic)) #useful for debugging
 
-                self.indexer.index(tokens, index)
+                self.indexer.index(tokens, index, positional_flag)
                 #print("Estimated indexing time: %.4fs" % (toc-tic)) #useful for debugging
 
         self.indexed_map = self.indexer.getIndexed()
 
     def rank(self, analyze_table, tokenizer_mode):
         self.updateIdfs()
-        #self.ranker.update(self.docs_length, self.collection_size, self.indexed_map, tokenizer_mode, "../content/snowball_stopwords_EN.txt")
-        #self.ranker.process_queries(analyze_table=analyze_table)
+        self.ranker.update(self.docs_length, self.collection_size, self.indexed_map, tokenizer_mode, "../content/snowball_stopwords_EN.txt")
+        self.ranker.process_queries(analyze_table=analyze_table)
 
     # we call this extra step, so every term has an idf
     def updateIdfs(self):
@@ -131,7 +131,7 @@ class RTLI:  # Reader, tokenizer, linguistic, indexer
         return mem_size + sys.getsizeof(input_dict)
 
 def usage():
-    print("Usage: python3 main.py \n\t-t <tokenizer_mode: complex/simple> \n\t-c <chunksize:int>\n\t-n <limit of docs returned:int> \n\t-r <ranking_mode:tf_idf/bm25> \n\t-a <analyze_table:boolean>")
+    print("Usage: python3 main.py \n\t-t <tokenizer_mode: complex/simple> \n\t-c <chunksize:int>\n\t-n <limit of docs returned:int> \n\t-r <ranking_mode:tf_idf/bm25> \n\t-a <analyze_table:boolean>\n\t-p <positional_indexing:boolean>")
 
 if __name__ == "__main__":  
 
@@ -143,11 +143,13 @@ if __name__ == "__main__":
     rank_mode = 'bm25'
     analyze_table = False
     docs_limit = 50
-    tokenizer_mode = 'complex'
+
+    # work nº3 defaults
+    positional_flag = False
 
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "ht:c:r:an:", ["help", "output="])
+        opts, args = getopt.getopt(sys.argv[1:], "ht:c:r:an:p", ["help", "output="])
     except getopt.GetoptError as err:
         # print help information and exit:
         print(str(err))  # will print something like "option -a not recognized"
@@ -196,10 +198,12 @@ if __name__ == "__main__":
                 print("Unrecognized tokenizer mode, use <simple/complex>\n")
                 usage()
                 sys.exit(1)
+        elif o == "-p":
+            positional_flag = True
         else:
             assert False, "unhandled option"
     
-    rtli = RTLI(tokenizer_mode=tokenizer_mode,chunksize=chunksize, rank_mode=rank_mode, docs_limit=docs_limit)
+    rtli = RTLI(tokenizer_mode=tokenizer_mode,chunksize=chunksize, rank_mode=rank_mode, docs_limit=docs_limit, positional_flag=positional_flag)
 
     # work nº1 calls
     tic = time.time()
