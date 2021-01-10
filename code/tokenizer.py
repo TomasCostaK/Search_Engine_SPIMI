@@ -18,22 +18,19 @@ class Tokenizer:
         # we do the simple tokenizer
         if self.tokenizer_mode == "simple":
             tokens = re.sub("[^a-zA-Z]+"," ",input_string).lower().split(" ")
-            tokens = [ (tokens[i],i) for i in range(0,len(tokens)) ]
+            tokens = [ (tokens[i],i) for i in range(0,len(tokens)) if len(tokens[i])>3 and tokens[i] not in self.stopwords]
 
         # we go into the complex tokenizer
         else:
             tokens = re.sub("[^0-9a-zA-Z]+"," ",input_string).lower().split(" ") # Make some changes here, having into account that this is a biomedical corpus
             # Snowball stemmer - PyStemmer implementation
-        
+            tokens = [token for token in tokens if len(token)>3 and token not in self.stopwords]
             tokens = self.stemmer.stemWords(tokens)
+            tokens = [ (tokens[i],i) for i in range(0,len(tokens)) ]
 
 
         # Iterate over each word in line 
         for token in tokens: 
-            # Disregard words with less than 3 chars, or if they are a stopword
-            if len(token[0])<=3 or token[0] in self.stopwords: 
-                continue
-
             # if it passes the condition, we shall add it to the final_tokens
             final_tokens.append((token[0],index, token[1])) #token 1 represents its position
 

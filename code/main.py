@@ -74,8 +74,8 @@ class RTLI:  # Reader, tokenizer, linguistic, indexer
 
     def rank(self, analyze_table, tokenizer_mode):
         self.updateIdfs()
-        #self.ranker.update(self.docs_length, self.collection_size, self.indexed_map, tokenizer_mode, "../content/snowball_stopwords_EN.txt")
-        #self.ranker.process_queries(analyze_table=analyze_table)
+        self.ranker.update(self.docs_length, self.collection_size, self.indexed_map, tokenizer_mode, "../content/snowball_stopwords_EN.txt")
+        self.ranker.process_queries(analyze_table=analyze_table)
 
     # we call this extra step, so every term has an idf
     def updateIdfs(self):
