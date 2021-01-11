@@ -78,9 +78,10 @@ class RTLI:  # Reader, tokenizer, linguistic, indexer
             
                 #print("Estimated tokenizing/stemming time: %.4fs" % (toc-tic)) #useful for debugging
                 # we do spimi here
-                print(mem)
                 block_index = self.indexer.index(tokens, index, positional_flag)
+                print("Memory before ", mem)
                 self.indexer.write_index_file(file_output=output_directory + '/block' + str(self.block_number) + '.txt', idf_flag=False)
+                print("Memory after: ", psutil.virtual_memory().available)
                 #print("Estimated indexing time: %.4fs" % (toc-tic)) #useful for debugging
                 self.block_number += 1
 
