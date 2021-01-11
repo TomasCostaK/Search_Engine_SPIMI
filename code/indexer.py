@@ -48,7 +48,7 @@ class Indexer:
                         value_dict[idx]['weight'] += 1
                         self.indexed_words[term]['col_freq'] += 1
                     self.indexed_words[term]['doc_ids'] = value_dict
-
+        
     def index_query(self,tokens):
         indexed_query = {}
         for token in tokens:
@@ -62,8 +62,14 @@ class Indexer:
         return indexed_query
 
     # function to write indexed terms to file, in a similar output to the one requested
-    def write_index_file(self, file_output='../output/indexed_map.txt'):
+    def write_index_file(self, file_output='../output/indexed_map.txt', idf_flag=True):
         with open(file_output,'w+') as f:
             for term, value in self.indexed_words.items():
-                string = term + ": " +  str(value['idf']) + '; ' +  str(value['doc_ids']) + '\n'
+                if idf_flag:
+                    string = term + ": " +  str(value['idf']) + '; ' +  str(value['doc_ids']) + '\n'
+                else:
+                    string = term + ": " +  str(value['doc_ids']) + '\n'
                 f.write(string)
+
+        # Clear out index for next block, SPIMI approach
+        self.indexed_words = {}

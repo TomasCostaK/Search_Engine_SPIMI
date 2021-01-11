@@ -10,6 +10,7 @@ import operator
 import os
 import csv
 import math
+import psutil
 import collections
 
 """
@@ -18,7 +19,7 @@ Tomás Costa - 89016
 """
 
 class RTLI:  # Reader, tokenizer, linguistic, indexer
-    def __init__(self, tokenizer_mode, file='../content/metadata_small.csv', stopwords_file="../content/snowball_stopwords_EN.txt", chunksize=400000, queries_path='../content/queries.txt' ,rank_mode='bm25', docs_limit=50, positional_flag=False):
+    def __init__(self, tokenizer_mode, file='../content/metadata.csv', stopwords_file="../content/snowball_stopwords_EN.txt", chunksize=400000, queries_path='../content/queries.txt' ,rank_mode='bm25', docs_limit=50, positional_flag=False):
         self.tokenizer = Tokenizer(tokenizer_mode, stopwords_file)
         self.indexer = Indexer(positional_flag=positional_flag)
         self.ranker = Ranker(queries_path=queries_path ,mode=rank_mode,docs_limit=docs_limit)
@@ -26,6 +27,7 @@ class RTLI:  # Reader, tokenizer, linguistic, indexer
 
         # defines the number of lines to be read at once
         self.chunksize = chunksize
+        self.block_number = 0
 
         # tryout for new structure in dict
         self.indexed_map = {}
@@ -48,13 +50,22 @@ class RTLI:  # Reader, tokenizer, linguistic, indexer
 
     # main function of indexing and tokenizing
     def process(self):
-        tokens = []
+        # here we clean the blocks folder
+        output_directory = './blocks/'
+        try:
+            os.mkdir(output_directory)
+        except FileExistsError:
+            for file in os.listdir(output_directory):
+                os.unlink(os.path.join(output_directory, file))
 
         # Reading step
         # We passed the reader to here, so we could do reading chunk by chunk
         with open(self.file, newline='', encoding="utf-8") as csvfile:
             reader = csv.DictReader(csvfile)
             for chunk in self.gen_chunks(reader):
+                # Check available memory
+                tokens = []
+                mem = psutil.virtual_memory().available
                 for row in chunk:
                     index = row['cord_uid']
                     # Tokenizer step
@@ -66,16 +77,19 @@ class RTLI:  # Reader, tokenizer, linguistic, indexer
                         self.collection_size += 1 
             
                 #print("Estimated tokenizing/stemming time: %.4fs" % (toc-tic)) #useful for debugging
-
-                self.indexer.index(tokens, index, positional_flag)
+                # we do spimi here
+                print(mem)
+                block_index = self.indexer.index(tokens, index, positional_flag)
+                self.indexer.write_index_file(file_output=output_directory + '/block' + str(self.block_number) + '.txt', idf_flag=False)
                 #print("Estimated indexing time: %.4fs" % (toc-tic)) #useful for debugging
+                self.block_number += 1
 
         self.indexed_map = self.indexer.getIndexed()
 
     def rank(self, analyze_table, tokenizer_mode):
         self.updateIdfs()
-        self.ranker.update(self.docs_length, self.collection_size, self.indexed_map, tokenizer_mode, "../content/snowball_stopwords_EN.txt")
-        self.ranker.process_queries(analyze_table=analyze_table)
+        #self.ranker.update(self.docs_length, self.collection_size, self.indexed_map, tokenizer_mode, "../content/snowball_stopwords_EN.txt")
+        #self.ranker.process_queries(analyze_table=analyze_table)
 
     # we call this extra step, so every term has an idf
     def updateIdfs(self):
