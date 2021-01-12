@@ -127,17 +127,7 @@ class Indexer:
             # we check initially, so we dont put the same term in two diff files
             mem_used = mem_initial - psutil.virtual_memory().available 
             if mem_used > 100000000 and current_term!=last_term: #only for cases bigger than 100Mb 
-                ordered_dict = sorted(self.temp_index.items(), key = lambda kv: kv[0])
-                smallest_word = ordered_dict[0][0]
-                highest_word = ordered_dict[-1][0]
-                with open(f"{self.index_directory}{smallest_word}_{highest_word}.txt",'w+') as f:
-                    for word, value in ordered_dict:
-                        string = f"{word}:{str(value)}\n"
-                        f.write(string)
-                self.temp_index = {}
-                f.close()
-                mem_initial = psutil.virtual_memory().available
-                print("Memory used:", mem_used)
+                self.write_partition_index(mem_used)
 
             if current_term != last_term:
                 self.temp_index[current_term] = ast.literal_eval(current_postings)
@@ -153,7 +143,19 @@ class Indexer:
                     block_files[min_index].close()
                     block_files.pop(min_index)
                     lines.pop(min_index)
-
-
         
-        #print(self.temp_index['wild'])
+        # Write the rest of the dict to disk
+        self.write_partition_index(mem_used)
+
+    def write_partition_index(self, mem_used):
+        ordered_dict = sorted(self.temp_index.items(), key = lambda kv: kv[0])
+        smallest_word = ordered_dict[0][0]
+        highest_word = ordered_dict[-1][0]
+        with open(f"{self.index_directory}{smallest_word}_{highest_word}.txt",'w+') as f:
+            for word, value in ordered_dict:
+                string = f"{word}:{str(value)}\n"
+                f.write(string)
+        self.temp_index = {}
+        f.close()
+        mem_initial = psutil.virtual_memory().available
+        print("Memory used:", mem_used)
