@@ -80,11 +80,19 @@ class Indexer:
 
     ## Set of functions for spimi approach
     def create_dirs(self):
+        # blocks
         try:
             os.mkdir(self.block_directory)
         except FileExistsError:
             for file in os.listdir(self.block_directory):
                 os.unlink(os.path.join(self.block_directory, file))
+
+        # index
+        try:
+            os.mkdir(self.index_directory)
+        except FileExistsError:
+            for file in os.listdir(self.index_directory):
+                os.unlink(os.path.join(self.index_directory, file))
     
     def create_block(self, block_nr):
         self.write_index_file(file_output=self.block_directory + '/block' + str(block_nr) + '.txt', idf_flag=False)
@@ -119,5 +127,19 @@ class Indexer:
                     self.temp_index[line[0]]['doc_ids'] = new_val
                 else: # we add to dict
                     self.temp_index[line[0]] = ast.literal_eval(line[1])
+
+            mem_used = mem_initial - psutil.virtual_memory().available 
+            if mem_used > 100000000: #only for cases bigger than 100Mb 
+                ordered_dict = sorted(self.temp_index.items(), key = lambda kv: kv[0])
+                smallest_word = ordered_dict[0][0]
+                highest_word = ordered_dict[-1][0]
+                with open(f"{self.index_directory}{smallest_word}_{highest_word}.txt",'w+') as f:
+                    for word, value in ordered_dict:
+                        string = f"{word}:{str(value)}\n"
+                        f.write(string)
+                self.temp_index = {}
+                mem_initial = psutil.virtual_memory().available
+                print("Memory used:", mem_used)
+
         
-        print(self.temp_index['wild'])
+        #print(self.temp_index['wild'])
