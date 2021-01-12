@@ -2,6 +2,7 @@ import re
 import pandas as pd
 import os
 import psutil
+import math
 import ast
 
 class Indexer:
@@ -10,9 +11,14 @@ class Indexer:
         self.positional_flag = positional_flag
         self.block_directory = './blocks/'
         self.index_directory = './index/'
+        self.collection_size = 0
     
     def getIndexed(self):
         return self.indexed_words
+
+        # we call this extra step, so every term has an idf
+    def updateColSize(self, collection_size):
+        self.collection_size = collection_size
 
     def index(self,tokens, idx, positional_flag):
 
@@ -74,7 +80,7 @@ class Indexer:
                 if idf_flag:
                     string = term + ": " +  str(value['idf']) + '; ' +  str(value['doc_ids']) + '\n'
                 else:
-                    string = term + ":{'doc_ids':" +  str(value['doc_ids']) + '}\n'
+                    string = term + ':' + str(value) + '\n'
                 f.write(string)
 
 
@@ -126,16 +132,30 @@ class Indexer:
             
             # we check initially, so we dont put the same term in two diff files
             mem_used = mem_initial - psutil.virtual_memory().available 
-            if mem_used > 100000000 and current_term!=last_term: #only for cases bigger than 100Mb 
+            if mem_used > 50000000 and current_term!=last_term: #only for cases bigger than 50Mb 
                 self.write_partition_index(mem_used)
 
             if current_term != last_term:
-                self.temp_index[current_term] = ast.literal_eval(current_postings)
+                json_dict = ast.literal_eval(current_postings)
+                self.temp_index[current_term] = json_dict
                 last_term = current_term
+                idf = math.log10(self.collection_size / json_dict['doc_freq'])
+                self.temp_index[current_term]['idf'] = idf
             else:
+                json_dict = ast.literal_eval(current_postings)
+                # update doc_ids
                 tmp_dict = self.temp_index[current_term]['doc_ids']
-                new_val = {**ast.literal_eval(current_postings)['doc_ids'], **tmp_dict} # merging the two dicts
+                new_val = {**json_dict['doc_ids'], **tmp_dict} # merging the two dicts
                 self.temp_index[current_term]['doc_ids'] = new_val
+
+                # update idf and doc_freq
+                self.temp_index[current_term]['doc_freq'] += json_dict['doc_freq']
+                self.temp_index[current_term]['col_freq'] += json_dict['col_freq']
+                
+                # At each step we take the doc_freq so we can calculate updated
+                idf = math.log10(self.collection_size / json_dict['doc_freq'])
+                self.temp_index[current_term]['idf'] = idf
+
 
             lines[min_index] = block_files[min_index].readline()[:-1]
 

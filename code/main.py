@@ -77,22 +77,16 @@ class RTLI:  # Reader, tokenizer, linguistic, indexer
                 self.indexer.create_block(self.block_number)
                 
                 self.block_number += 1
-
+        
+        self.indexer.updateColSize(self.collection_size)
         self.indexer.merge_blocks()
         # we shouldnt load the whole array
         self.indexed_map = self.indexer.getIndexed()
 
     def rank(self, analyze_table, tokenizer_mode):
-        self.updateIdfs()
         #self.ranker.update(self.docs_length, self.collection_size, self.indexed_map, tokenizer_mode, "../content/snowball_stopwords_EN.txt")
         #self.ranker.process_queries(analyze_table=analyze_table)
-
-    # we call this extra step, so every term has an idf
-    def updateIdfs(self):
-        for term, value in self.indexed_map.items():
-            idf = math.log10(self.collection_size / self.indexed_map[term]['doc_freq'])
-            self.indexed_map[term]['idf'] = idf
-
+        pass
 
     def write_index_file(self):
         self.indexer.write_index_file()
