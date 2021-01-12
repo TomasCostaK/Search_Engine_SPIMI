@@ -63,8 +63,9 @@ class Indexer:
 
     # function to write indexed terms to file, in a similar output to the one requested
     def write_index_file(self, file_output='../output/indexed_map.txt', idf_flag=True):
+        ordered_dict = sorted(self.indexed_words.items(), key = lambda kv: kv[0])
         with open(file_output,'w+') as f:
-            for term, value in self.indexed_words.items():
+            for term, value in ordered_dict:
                 if idf_flag:
                     string = term + ": " +  str(value['idf']) + '; ' +  str(value['doc_ids']) + '\n'
                 else:

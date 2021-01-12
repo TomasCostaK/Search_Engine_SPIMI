@@ -19,7 +19,7 @@ Tomás Costa - 89016
 """
 
 class RTLI:  # Reader, tokenizer, linguistic, indexer
-    def __init__(self, tokenizer_mode, file='../content/metadata.csv', stopwords_file="../content/snowball_stopwords_EN.txt", chunksize=400000, queries_path='../content/queries.txt' ,rank_mode='bm25', docs_limit=50, positional_flag=False):
+    def __init__(self, tokenizer_mode, file='../content/metadata.csv', stopwords_file="../content/snowball_stopwords_EN.txt", chunksize=1000, queries_path='../content/queries.txt' ,rank_mode='bm25', docs_limit=50, positional_flag=False):
         self.tokenizer = Tokenizer(tokenizer_mode, stopwords_file)
         self.indexer = Indexer(positional_flag=positional_flag)
         self.ranker = Ranker(queries_path=queries_path ,mode=rank_mode,docs_limit=docs_limit)
@@ -77,11 +77,9 @@ class RTLI:  # Reader, tokenizer, linguistic, indexer
                         self.collection_size += 1 
             
                 #print("Estimated tokenizing/stemming time: %.4fs" % (toc-tic)) #useful for debugging
-                # we do spimi here
+                # SPIMI Approach
                 block_index = self.indexer.index(tokens, index, positional_flag)
-                print("Memory before ", mem)
                 self.indexer.write_index_file(file_output=output_directory + '/block' + str(self.block_number) + '.txt', idf_flag=False)
-                print("Memory after: ", psutil.virtual_memory().available)
                 #print("Estimated indexing time: %.4fs" % (toc-tic)) #useful for debugging
                 self.block_number += 1
 
@@ -223,14 +221,13 @@ if __name__ == "__main__":
     # work nº1 calls
     tic = time.time()
     rtli.process()
-    toc = time.time()
+    #toc = time.time()
 
     #rtli.domain_questions(toc-tic)
 
     # work nº2 calls
-    tic = time.time()
     rtli.rank(analyze_table, tokenizer_mode)
-    toc = time.time()
 
     #work nº3 calls
     rtli.write_index_file()
+    print("Time : ", time.time()-tic)
