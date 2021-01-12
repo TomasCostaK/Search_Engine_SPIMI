@@ -40,10 +40,9 @@ class Ranker:
         self.mean_latency_array = []
 
 
-    def update(self, docs_len, collection_size, indexed_words, tokenizer_mode, stopwords_file):
+    def update(self, docs_len, collection_size, tokenizer_mode, stopwords_file):
         self.docs_length = docs_len
         # atributes used in calculus
-        self.indexed_map = indexed_words
         self.collection_size = collection_size
         self.tokenizer = Tokenizer(tokenizer_mode, stopwords_file)
 

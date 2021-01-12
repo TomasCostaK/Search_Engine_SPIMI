@@ -86,19 +86,30 @@ class Indexer:
 
     ## Set of functions for spimi approach
     def create_dirs(self):
+        reindex_flag = False
         # blocks
         try:
             os.mkdir(self.block_directory)
         except FileExistsError:
+            """
             for file in os.listdir(self.block_directory):
                 os.unlink(os.path.join(self.block_directory, file))
+            """
+            if os.listdir(self.block_directory) != []:
+                reindex_flag = True
 
         # index
         try:
             os.mkdir(self.index_directory)
         except FileExistsError:
+            """
             for file in os.listdir(self.index_directory):
                 os.unlink(os.path.join(self.index_directory, file))
+            """
+            if os.listdir(self.index_directory) != []:
+                reindex_flag = True
+        
+        return reindex_flag
     
     def create_block(self, block_nr):
         self.write_index_file(file_output=self.block_directory + '/block' + str(block_nr) + '.txt', idf_flag=False)
@@ -132,8 +143,9 @@ class Indexer:
             
             # we check initially, so we dont put the same term in two diff files
             mem_used = mem_initial - psutil.virtual_memory().available 
-            if mem_used > 50000000 and current_term!=last_term: #only for cases bigger than 50Mb 
+            if mem_used > 500000000 and current_term!=last_term: #only for cases bigger than 100Mb 
                 self.write_partition_index(mem_used)
+                mem_initial = psutil.virtual_memory().available
 
             if current_term != last_term:
                 json_dict = ast.literal_eval(current_postings)
@@ -177,5 +189,3 @@ class Indexer:
                 f.write(string)
         self.temp_index = {}
         f.close()
-        mem_initial = psutil.virtual_memory().available
-        print("Memory used:", mem_used)

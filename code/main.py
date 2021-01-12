@@ -29,9 +29,6 @@ class RTLI:  # Reader, tokenizer, linguistic, indexer
         self.chunksize = chunksize
         self.block_number = 0
 
-        # tryout for new structure in dict
-        self.indexed_map = {}
-
         # used in bm25 to check each documents length, and the average of all docs
         self.docs_length = {}
 
@@ -52,87 +49,47 @@ class RTLI:  # Reader, tokenizer, linguistic, indexer
     def process(self):
 
         # Clean dirs
-        self.indexer.create_dirs()
+        reindex_flag = self.indexer.create_dirs()
 
-        # Reading step
-        # We passed the reader to here, so we could do reading chunk by chunk
-        with open(self.file, newline='', encoding="utf-8") as csvfile:
-            reader = csv.DictReader(csvfile)
-            for chunk in self.gen_chunks(reader):
-                # Check available memory
-                tokens = []
-                mem = psutil.virtual_memory().available
-                for row in chunk:
-                    index = row['cord_uid']
-                    # Tokenizer step
-                    if row['abstract'] != "":
-                        appended_string = row['abstract'] + " " + row['title']
-                        tokens += self.tokenizer.tokenize(appended_string, index)
+        if not reindex_flag:
+            # Reading step
+            # We passed the reader to here, so we could do reading chunk by chunk
+            with open(self.file, newline='', encoding="utf-8") as csvfile:
+                reader = csv.DictReader(csvfile)
+                for chunk in self.gen_chunks(reader):
+                    # Check available memory
+                    tokens = []
+                    mem = psutil.virtual_memory().available
+                    for row in chunk:
+                        index = row['cord_uid']
+                        # Tokenizer step
+                        if row['abstract'] != "":
+                            appended_string = row['abstract'] + " " + row['title']
+                            tokens += self.tokenizer.tokenize(appended_string, index)
 
-                        self.docs_length[index] = len(tokens)
-                        self.collection_size += 1 
-            
-                # SPIMI Approach
-                block_index = self.indexer.index(tokens, index, positional_flag)
-                self.indexer.create_block(self.block_number)
+                            self.docs_length[index] = len(tokens)
+                            self.collection_size += 1 
                 
-                self.block_number += 1
-        
-        self.indexer.updateColSize(self.collection_size)
-        self.indexer.merge_blocks()
-        # we shouldnt load the whole array
-        self.indexed_map = self.indexer.getIndexed()
+                    # SPIMI Approach
+                    block_index = self.indexer.index(tokens, index, positional_flag)
+                    self.indexer.create_block(self.block_number)
+                    
+                    self.block_number += 1
+            
+            self.indexer.updateColSize(self.collection_size)
+            self.indexer.merge_blocks()
+            # we shouldnt load the whole array
+
+        # Here we start evaluating by reading the several index in files
+        #self.indexed_map = self.indexer.getIndexed()
 
     def rank(self, analyze_table, tokenizer_mode):
-        #self.ranker.update(self.docs_length, self.collection_size, self.indexed_map, tokenizer_mode, "../content/snowball_stopwords_EN.txt")
+        #self.ranker.update(self.docs_length, self.collection_size,  tokenizer_mode, "../content/snowball_stopwords_EN.txt")
         #self.ranker.process_queries(analyze_table=analyze_table)
         pass
 
     def write_index_file(self):
         self.indexer.write_index_file()
-
-    # Questions being asked in work nº1
-    def domain_questions(self, time):
-        # Question a)
-        mem_size = self.calculate_dict_size(self.indexed_map) / 1024 / 1024
-        print("A) Estimated process time: %.4fs and spent %.2f Mb of memory" %
-            (time, mem_size))
-
-        # Question b)
-        vocab_size = len(self.indexed_map.keys())
-        print("B) Vocabulary size is: %d" % (vocab_size))
-
-        # Question c)
-        # i think we can do this, because these keys only have 1 value, which is the least possible to get inserted into the dict
-        ten_least_frequent = [key for (key, value) in sorted(
-            self.indexed_map.items(), key=lambda x: x[1]['col_freq'], reverse=False)[:10]]
-        # sort alphabetical
-        #ten_least_frequent.sort()
-        print("\nC) Ten least frequent terms:")
-        for term in ten_least_frequent:
-            print(term)
-
-        # Question d)
-        # i think we can do this, because these keys only have 1 value, which is the least possible to get inserted into the dict
-        ten_most_frequent = [key for (key, value) in sorted(
-            self.indexed_map.items(), key=lambda x: x[1]['col_freq'], reverse=True)[:10]]
-        # sort alphabetical
-        #ten_most_frequent.sort()
-        print("\nD) Ten most frequent terms:")
-        for term in ten_most_frequent:
-            print(term)
-
-    # auxiliary function to calculate dict size recursively
-    def calculate_dict_size(self, input_dict):
-        mem_size = 0
-        for key, value in input_dict.items():
-            # in python they dont count size, so we have to do it iteratively
-            mem_size += sys.getsizeof(value)
-            for key2, value2 in value['doc_ids'].items(): 
-                mem_size += sys.getsizeof(value2)
-
-        # adding the own dictionary size
-        return mem_size + sys.getsizeof(input_dict)
 
 def usage():
     print("Usage: python3 main.py \n\t-t <tokenizer_mode: complex/simple> \n\t-c <chunksize:int>\n\t-n <limit of docs returned:int> \n\t-r <ranking_mode:tf_idf/bm25> \n\t-a <analyze_table:boolean>\n\t-p <positional_indexing:boolean>")
