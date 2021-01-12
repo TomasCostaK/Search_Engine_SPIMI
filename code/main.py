@@ -81,11 +81,13 @@ class RTLI:  # Reader, tokenizer, linguistic, indexer
                     self.block_number += 1
             
             self.indexer.updateColSize(self.collection_size)
+            tokens = [] # clear out memory from last batch of tokens
             self.indexer.merge_blocks()
             # we shouldnt load the whole array
 
             # update the info document, useful for when we have already indexed the collection, but needs these params
             self.indexer.write_info(self.collection_size)
+            self.indexer.write_docs_len(self.docs_length)
 
         # Here we start evaluating by reading the several index in files
         #self.indexed_map = self.indexer.getIndexed()

@@ -132,7 +132,16 @@ class Indexer:
                 os.unlink(os.path.join(tmp_dir, file))
 
         with open(tmp_dir + 'info.txt', 'w+') as f:
-            f.write(str(col_size))
+            f.write(str(col_size) + '\n')
+        f.close()
+    
+    def write_docs_len(self, docs_len):
+        tmp_dir = "./tmp/"
+
+        with open(tmp_dir + 'info.txt', 'a+') as f:
+            for key,value in docs_len.items():
+                string = f"{key}:{value}\n"
+                f.write(string)
         f.close()
 
     def create_block(self, block_nr):

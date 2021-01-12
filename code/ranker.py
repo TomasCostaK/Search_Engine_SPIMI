@@ -5,6 +5,9 @@ from tokenizer import Tokenizer
 import sys
 import numpy as np
 import os
+import re
+import psutil
+import ast
 import time
 import math
 import collections
@@ -22,6 +25,10 @@ class Ranker:
 
         #type of ranking mode
         self.mode = mode
+
+        # index in memory
+        self.mem_index = {}
+        self.history_files = {}
         
         #limit of docs being analyzed, usually 50 for seeing the table
         self.docs_limit = docs_limit
@@ -44,18 +51,21 @@ class Ranker:
 
 
     def update(self, docs_len, collection_size, tokenizer_mode, stopwords_file):
-        self.docs_length = docs_len
         # atributes used in calculus
-        if collection_size == 0:
+        if collection_size == 0 or docs_len == {}:
             try:
                 file = open('tmp/info.txt',mode='r')
-                self.collection_size = int(file.read())
+                self.collection_size = int(file.readline())
+                for line in file.readlines():
+                    term, value = re.split(':',line)
+                    self.docs_length[term] = int(value) 
                 file.close()
             except Exception:
                 print("Error reading previous indexed values\nPlease run: python3 main.py -z")
                 sys.exit()
         else:
             self.collection_size = collection_size
+            self.docs_length = docs_len
         
         self.tokenizer = Tokenizer(tokenizer_mode, stopwords_file)
         #update documents length
@@ -161,18 +171,36 @@ class Ranker:
             #special treatment, weights at 0
             
             for file in os.listdir(self.index_directory):
+                # here we get the range in which the word should be located
                 smallest_word, highest_word = file.split('.')[0].split('_')
-                print(highest_word)
                 if term < highest_word and term > smallest_word:
-                    print("correct file", file)
+                
+                    # check if we have memory for loading whole file
+                    memory = psutil.virtual_memory()
+                    
+                    # TODO, if memory.percent > 60, tirar os ficheiros que foram menos usados, ter de alguma forma os termos associados a cada file e um contador para esse file
+                    
+                    if memory.available > os.stat(self.index_directory + file).st_size:
+                        #procurar dentro do ficheiro
+                        with open(self.index_directory + file) as f:
+                            for line in f.readlines():
+                                term_file,value = re.split(':', line.rstrip('\n'), maxsplit=1)
+                                self.mem_index[term_file] = ast.literal_eval(value)
+                    # if we cant load the whole file, we only load the index
+                    else:
+                        with open(self.index_directory + file) as f:
+                            for line in f.readlines():
+                                term_file,value = re.split(':', line.rstrip('\n'), maxsplit=1)
+                                if term == term_file:
+                                    self.mem_index[term_file] = ast.literal_eval(value)
 
-            df = self.indexed_map[term]['doc_freq']
+            df = self.mem_index[term]['doc_freq']
 
             # calculate idf for each term
-            idf = self.indexed_map[term]['idf']
+            idf = self.mem_index[term]['idf']
 
             # now we iterate over every term
-            for doc_id, doc_id_dict in self.indexed_map[term]['doc_ids'].items():
+            for doc_id, doc_id_dict in self.mem_index[term]['doc_ids'].items():
                 tf_doc = doc_id_dict['weight']
                 dl = self.docs_length[doc_id]
                 score = self.calculate_BM25(df, dl, self.avdl, tf_doc)
