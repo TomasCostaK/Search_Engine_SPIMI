@@ -19,7 +19,7 @@ Tomás Costa - 89016
 """
 
 class RTLI:  # Reader, tokenizer, linguistic, indexer
-    def __init__(self, tokenizer_mode, file='../content/metadata.csv', stopwords_file="../content/snowball_stopwords_EN.txt", chunksize=1000, queries_path='../content/queries.txt' ,rank_mode='bm25', docs_limit=50, positional_flag=False):
+    def __init__(self, tokenizer_mode, file='../content/metadata_small.csv', stopwords_file="../content/snowball_stopwords_EN.txt", chunksize=10000, queries_path='../content/queries.txt' ,rank_mode='bm25', docs_limit=50, positional_flag=False):
         self.tokenizer = Tokenizer(tokenizer_mode, stopwords_file)
         self.indexer = Indexer(positional_flag=positional_flag)
         self.ranker = Ranker(queries_path=queries_path ,mode=rank_mode,docs_limit=docs_limit)
@@ -50,13 +50,9 @@ class RTLI:  # Reader, tokenizer, linguistic, indexer
 
     # main function of indexing and tokenizing
     def process(self):
-        # here we clean the blocks folder
-        output_directory = './blocks/'
-        try:
-            os.mkdir(output_directory)
-        except FileExistsError:
-            for file in os.listdir(output_directory):
-                os.unlink(os.path.join(output_directory, file))
+
+        # Clean dirs
+        self.indexer.create_dirs()
 
         # Reading step
         # We passed the reader to here, so we could do reading chunk by chunk
@@ -76,13 +72,14 @@ class RTLI:  # Reader, tokenizer, linguistic, indexer
                         self.docs_length[index] = len(tokens)
                         self.collection_size += 1 
             
-                #print("Estimated tokenizing/stemming time: %.4fs" % (toc-tic)) #useful for debugging
                 # SPIMI Approach
                 block_index = self.indexer.index(tokens, index, positional_flag)
-                self.indexer.write_index_file(file_output=output_directory + '/block' + str(self.block_number) + '.txt', idf_flag=False)
-                #print("Estimated indexing time: %.4fs" % (toc-tic)) #useful for debugging
+                self.indexer.create_block(self.block_number)
+                
                 self.block_number += 1
 
+        self.indexer.merge_blocks()
+        # we shouldnt load the whole array
         self.indexed_map = self.indexer.getIndexed()
 
     def rank(self, analyze_table, tokenizer_mode):

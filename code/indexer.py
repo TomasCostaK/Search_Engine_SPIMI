@@ -1,10 +1,15 @@
 import re
 import pandas as pd
+import os
+import psutil
+import ast
 
 class Indexer:
     def __init__(self,initial_structure={},positional_flag=False):
         self.indexed_words = initial_structure
         self.positional_flag = positional_flag
+        self.block_directory = './blocks/'
+        self.index_directory = './index/'
     
     def getIndexed(self):
         return self.indexed_words
@@ -63,14 +68,56 @@ class Indexer:
 
     # function to write indexed terms to file, in a similar output to the one requested
     def write_index_file(self, file_output='../output/indexed_map.txt', idf_flag=True):
-        ordered_dict = sorted(self.indexed_words.items(), key = lambda kv: kv[0])
+        ordered_dict = sorted(self.indexed_words.items(), key = lambda kv: kv[0])   
         with open(file_output,'w+') as f:
             for term, value in ordered_dict:
                 if idf_flag:
                     string = term + ": " +  str(value['idf']) + '; ' +  str(value['doc_ids']) + '\n'
                 else:
-                    string = term + ": " +  str(value['doc_ids']) + '\n'
+                    string = term + ":{'doc_ids':" +  str(value['doc_ids']) + '}\n'
                 f.write(string)
 
+
+    ## Set of functions for spimi approach
+    def create_dirs(self):
+        try:
+            os.mkdir(self.block_directory)
+        except FileExistsError:
+            for file in os.listdir(self.block_directory):
+                os.unlink(os.path.join(self.block_directory, file))
+    
+    def create_block(self, block_nr):
+        self.write_index_file(file_output=self.block_directory + '/block' + str(block_nr) + '.txt', idf_flag=False)
         # Clear out index for next block, SPIMI approach
         self.indexed_words = {}
+
+    def merge_blocks(self):
+        self.temp_index = {}
+        block_files = os.listdir(self.block_directory)
+        files = [open(self.block_directory+block_file) for block_file in block_files]
+
+        mem_initial = psutil.virtual_memory().available
+        # start looking through words
+        while True:
+            # stopping condition
+            if len(files) == 0:
+                break
+            for file in files:
+                try:
+                    line = re.split(":",file.readline().rstrip('\n'),maxsplit=1)
+                except:
+                    continue
+                
+                # invalid lines
+                if line[0] == '':
+                    files.remove(file)
+                    continue
+
+                if line[0] in self.temp_index.keys():
+                    tmp_dict = self.temp_index[line[0]]['doc_ids']
+                    new_val = {**ast.literal_eval(line[1])['doc_ids'], **tmp_dict} # merging the two dicts
+                    self.temp_index[line[0]]['doc_ids'] = new_val
+                else: # we add to dict
+                    self.temp_index[line[0]] = ast.literal_eval(line[1])
+        
+        print(self.temp_index['wild'])
