@@ -2,6 +2,7 @@ import re
 import pandas as pd
 import os
 import psutil
+import sys
 import math
 import ast
 
@@ -83,6 +84,17 @@ class Indexer:
                     string = term + ':' + str(value) + '\n'
                 f.write(string)
 
+    def reset_dirs(self):
+        try:
+            for file in os.listdir(self.block_directory):
+                os.unlink(os.path.join(self.block_directory, file))
+            for file in os.listdir(self.index_directory):
+                os.unlink(os.path.join(self.index_directory, file))
+            for file in os.listdir('./tmp/'):
+                os.unlink(os.path.join('./tmp/', file))
+        except Exception:
+            print("Problem resetting directories.")
+            sys.exit()
 
     ## Set of functions for spimi approach
     def create_dirs(self):
@@ -111,6 +123,18 @@ class Indexer:
         
         return reindex_flag
     
+    def write_info(self, col_size):
+        tmp_dir = "./tmp/"
+        try:
+            os.mkdir(tmp_dir)
+        except FileExistsError:
+            for file in os.listdir(tmp_dir):
+                os.unlink(os.path.join(tmp_dir, file))
+
+        with open(tmp_dir + 'info.txt', 'w+') as f:
+            f.write(str(col_size))
+        f.close()
+
     def create_block(self, block_nr):
         self.write_index_file(file_output=self.block_directory + '/block' + str(block_nr) + '.txt', idf_flag=False)
         # Clear out index for next block, SPIMI approach
@@ -143,7 +167,7 @@ class Indexer:
             
             # we check initially, so we dont put the same term in two diff files
             mem_used = mem_initial - psutil.virtual_memory().available 
-            if mem_used > 500000000 and current_term!=last_term: #only for cases bigger than 100Mb 
+            if mem_used > 100000000 and current_term!=last_term: #only for cases bigger than 100Mb 
                 self.write_partition_index(mem_used)
                 mem_initial = psutil.virtual_memory().available
 

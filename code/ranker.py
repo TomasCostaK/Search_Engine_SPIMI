@@ -4,6 +4,7 @@ from tokenizer import Tokenizer
 
 import sys
 import numpy as np
+import os
 import time
 import math
 import collections
@@ -39,13 +40,24 @@ class Ranker:
         self.mean_ndcg_array = []
         self.mean_latency_array = []
 
+        self.index_directory = './index/'
+
 
     def update(self, docs_len, collection_size, tokenizer_mode, stopwords_file):
         self.docs_length = docs_len
         # atributes used in calculus
-        self.collection_size = collection_size
+        if collection_size == 0:
+            try:
+                file = open('tmp/info.txt',mode='r')
+                self.collection_size = int(file.read())
+                file.close()
+            except Exception:
+                print("Error reading previous indexed values\nPlease run: python3 main.py -z")
+                sys.exit()
+        else:
+            self.collection_size = collection_size
+        
         self.tokenizer = Tokenizer(tokenizer_mode, stopwords_file)
-
         #update documents length
         self.avdl = sum([ value for key,value in self.docs_length.items()]) / self.collection_size
    
@@ -108,8 +120,9 @@ class Ranker:
 
         for term,tf_query in indexed_query.items():
             #special treatment, weights at 0
-            if term not in self.indexed_map.keys():
-                continue
+
+            for file in os.listdir(self.index_directory):
+                print("Term: %s, file: %s" % (term, file))
             
             tf_weight = math.log10(tf_query) + 1
             df = self.indexed_map[term]['doc_freq']
@@ -146,8 +159,12 @@ class Ranker:
 
         for term,tf_query in indexed_query.items():
             #special treatment, weights at 0
-            if term not in self.indexed_map.keys():
-                continue
+            
+            for file in os.listdir(self.index_directory):
+                smallest_word, highest_word = file.split('.')[0].split('_')
+                print(highest_word)
+                if term < highest_word and term > smallest_word:
+                    print("correct file", file)
 
             df = self.indexed_map[term]['doc_freq']
 

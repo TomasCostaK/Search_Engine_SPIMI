@@ -46,7 +46,11 @@ class RTLI:  # Reader, tokenizer, linguistic, indexer
         yield chunk
 
     # main function of indexing and tokenizing
-    def process(self):
+    def process(self, reset_dirs):
+        
+        # optional arg to clear our directories
+        if reset_dirs:
+            self.indexer.reset_dirs()
 
         # Clean dirs
         reindex_flag = self.indexer.create_dirs()
@@ -80,13 +84,15 @@ class RTLI:  # Reader, tokenizer, linguistic, indexer
             self.indexer.merge_blocks()
             # we shouldnt load the whole array
 
+            # update the info document, useful for when we have already indexed the collection, but needs these params
+            self.indexer.write_info(self.collection_size)
+
         # Here we start evaluating by reading the several index in files
         #self.indexed_map = self.indexer.getIndexed()
 
     def rank(self, analyze_table, tokenizer_mode):
-        #self.ranker.update(self.docs_length, self.collection_size,  tokenizer_mode, "../content/snowball_stopwords_EN.txt")
-        #self.ranker.process_queries(analyze_table=analyze_table)
-        pass
+        self.ranker.update(self.docs_length, self.collection_size,  tokenizer_mode, "../content/snowball_stopwords_EN.txt")
+        self.ranker.process_queries(analyze_table=analyze_table)
 
     def write_index_file(self):
         self.indexer.write_index_file()
@@ -107,10 +113,11 @@ if __name__ == "__main__":
 
     # work nº3 defaults
     positional_flag = False
+    reset_dirs = False
 
 
     try:
-        opts, args = getopt.getopt(sys.argv[1:], "ht:c:r:an:p", ["help", "output="])
+        opts, args = getopt.getopt(sys.argv[1:], "ht:c:r:an:pz", ["help", "output="])
     except getopt.GetoptError as err:
         # print help information and exit:
         print(str(err))  # will print something like "option -a not recognized"
@@ -128,6 +135,8 @@ if __name__ == "__main__":
             sys.exit()
         elif o == "-a":
             analyze_table = True
+        elif o == "-z":
+            reset_dirs = True
         elif o == "-c":
             try:
                 chunksize = int(a)
@@ -167,15 +176,12 @@ if __name__ == "__main__":
     rtli = RTLI(tokenizer_mode=tokenizer_mode,chunksize=chunksize, rank_mode=rank_mode, docs_limit=docs_limit, positional_flag=positional_flag)
 
     # work nº1 calls
-    tic = time.time()
-    rtli.process()
-    #toc = time.time()
-
-    #rtli.domain_questions(toc-tic)
+    rtli.process(reset_dirs)
 
     # work nº2 calls
     rtli.rank(analyze_table, tokenizer_mode)
 
     #work nº3 calls
+    tic = time.time()
     rtli.write_index_file()
-    print("Time : ", time.time()-tic)
+    print("Time Writting index: ", time.time()-tic)
