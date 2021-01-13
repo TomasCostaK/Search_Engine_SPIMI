@@ -178,12 +178,14 @@ if __name__ == "__main__":
     rtli = RTLI(tokenizer_mode=tokenizer_mode,chunksize=chunksize, rank_mode=rank_mode, docs_limit=docs_limit, positional_flag=positional_flag)
 
     # work nº1 calls
+    tic = time.time()
     rtli.process(reset_dirs)
+    print("Time Indexing: ", time.time()-tic)
 
     # work nº2 calls
+    tic = time.time()
     rtli.rank(analyze_table, tokenizer_mode)
+    print("Time Ranking: ", time.time()-tic)
 
     #work nº3 calls
-    tic = time.time()
     rtli.write_index_file()
-    print("Time Writting index: ", time.time()-tic)
