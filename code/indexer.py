@@ -181,7 +181,7 @@ class Indexer:
             
             # we check initially, so we dont put the same term in two diff files
             mem_used = mem_initial - psutil.virtual_memory().available 
-            if mem_used > 100000000 and current_term!=last_term: #only for cases bigger than 100Mb 
+            if mem_used > 3000000 and current_term!=last_term: #only for cases bigger than 100Mb 
                 self.write_partition_index(mem_used)
                 mem_initial = psutil.virtual_memory().available
 

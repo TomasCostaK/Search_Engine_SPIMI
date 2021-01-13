@@ -188,7 +188,7 @@ class Ranker:
 
             #lista = [ (termo_inicial, termo_final, {a: doc_ids, b: doc_ids}, count_used) , ... ]
             
-            # Only goes searching in files if not already in memory
+            # Only goes searching in term if not already in memory
             correct_file = self.return_file_range(term)
 
             if correct_file == None:
@@ -196,15 +196,14 @@ class Ranker:
                     # here we get the range in which the word should be located
                     file_range = file.split('.')[0]
                     smallest_word, highest_word = file_range.split('_')
-                    if term < highest_word and term > smallest_word:
+                    if term <= highest_word and term >= smallest_word:
                     
                         # check if we have memory for loading whole file
                         memory = psutil.virtual_memory()
                         
-                        # TODO, if memory.percent > 60, tirar os ficheiros que foram menos usados, ter de alguma forma os termos associados a cada file e um contador para esse file
                         # term isnt indexed and we should remove some opened files
-                        # here we will discard the least used range of words if less than 60% of memory is available
-                        memory_percentage_threshold = 7
+                        # here we will discard the least used range of words if less than 75% of memory is available
+                        memory_percentage_threshold = 75
                         if memory.percent > memory_percentage_threshold:
                             sorted_dicts = [ file_range[0] for file_range in sorted(self.mem_index.items(), key=lambda x: x[1]['count'])]
                             print("Deleting %s to free up memory" % (f"{sorted_dicts[0]}.txt"))
