@@ -10,8 +10,8 @@ class Indexer:
     def __init__(self,initial_structure={},positional_flag=False):
         self.indexed_words = initial_structure
         self.positional_flag = positional_flag
-        self.block_directory = './blocks/'
-        self.index_directory = './index/'
+        self.block_directory = './.tmp/blocks/'
+        self.index_directory = './.tmp/index/'        
         self.collection_size = 0
     
     def getIndexed(self):
@@ -90,15 +90,20 @@ class Indexer:
                 os.unlink(os.path.join(self.block_directory, file))
             for file in os.listdir(self.index_directory):
                 os.unlink(os.path.join(self.index_directory, file))
-            for file in os.listdir('./tmp/'):
-                os.unlink(os.path.join('./tmp/', file))
+            for file in os.listdir('./.tmp/info/'):
+                os.unlink(os.path.join('./.tmp/info/', file))
         except Exception:
-            print("Problem resetting directories.")
+            print("Problem resetting directories. Run without -z argument")
             sys.exit()
 
     ## Set of functions for spimi approach
     def create_dirs(self):
         reindex_flag = False
+        try:
+            os.mkdir("./.tmp/")
+        except FileExistsError:
+            if os.listdir("./.tmp/info/") != []:
+                reindex_flag = True
         # blocks
         try:
             os.mkdir(self.block_directory)
@@ -124,7 +129,7 @@ class Indexer:
         return reindex_flag
     
     def write_info(self, col_size):
-        tmp_dir = "./tmp/"
+        tmp_dir = "./.tmp/info/"
         try:
             os.mkdir(tmp_dir)
         except FileExistsError:
@@ -136,7 +141,7 @@ class Indexer:
         f.close()
     
     def write_docs_len(self, docs_len):
-        tmp_dir = "./tmp/"
+        tmp_dir = "./.tmp/info/"
 
         with open(tmp_dir + 'info.txt', 'a+') as f:
             for key,value in docs_len.items():

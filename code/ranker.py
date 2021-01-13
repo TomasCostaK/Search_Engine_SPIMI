@@ -47,14 +47,14 @@ class Ranker:
         self.mean_ndcg_array = []
         self.mean_latency_array = []
 
-        self.index_directory = './index/'
+        self.index_directory = './.tmp/index/'
 
 
     def update(self, docs_len, collection_size, tokenizer_mode, stopwords_file):
         # atributes used in calculus
         if collection_size == 0 or docs_len == {}:
             try:
-                file = open('tmp/info.txt',mode='r')
+                file = open('.tmp/info/info.txt',mode='r')
                 self.collection_size = int(file.readline())
                 for line in file.readlines():
                     term, value = re.split(':',line)
@@ -170,31 +170,41 @@ class Ranker:
         for term,tf_query in indexed_query.items():
             #special treatment, weights at 0
             
-            for file in os.listdir(self.index_directory):
-                # here we get the range in which the word should be located
-                smallest_word, highest_word = file.split('.')[0].split('_')
-                if term < highest_word and term > smallest_word:
-                
-                    # check if we have memory for loading whole file
-                    memory = psutil.virtual_memory()
+            # Only goes searching in files if not already in memory
+            if term not in self.mem_index.keys():
+                for file in os.listdir(self.index_directory):
+                    # here we get the range in which the word should be located
+                    smallest_word, highest_word = file.split('.')[0].split('_')
+                    if term < highest_word and term > smallest_word:
                     
-                    # TODO, if memory.percent > 60, tirar os ficheiros que foram menos usados, ter de alguma forma os termos associados a cada file e um contador para esse file
-                    
-                    if memory.available > os.stat(self.index_directory + file).st_size:
-                        #procurar dentro do ficheiro
-                        with open(self.index_directory + file) as f:
-                            for line in f.readlines():
-                                term_file,value = re.split(':', line.rstrip('\n'), maxsplit=1)
-                                self.mem_index[term_file] = ast.literal_eval(value)
-                    # if we cant load the whole file, we only load the index
-                    else:
-                        with open(self.index_directory + file) as f:
-                            for line in f.readlines():
-                                term_file,value = re.split(':', line.rstrip('\n'), maxsplit=1)
-                                if term == term_file:
-                                    self.mem_index[term_file] = ast.literal_eval(value)
+                        # check if we have memory for loading whole file
+                        memory = psutil.virtual_memory()
+                        
+                        # TODO, if memory.percent > 70, tirar os ficheiros que foram menos usados, ter de alguma forma os termos associados a cada file e um contador para esse file
+                        # term isnt indexed and we should remove some opened files
 
-            df = self.mem_index[term]['doc_freq']
+                        if memory.available > os.stat(self.index_directory + file).st_size:
+                            #procurar dentro do ficheiro
+                            with open(self.index_directory + file) as f:
+                                print("Loading %s into memory, for term: %s" % (file, term))
+                                for line in f.readlines():
+                                    term_file,value = re.split(':', line.rstrip('\n'), maxsplit=1)
+                                    self.mem_index[term_file] = ast.literal_eval(value)
+                        # if we cant load the whole file, we only load the index
+                        else:
+                            with open(self.index_directory + file) as f:
+                                for line in f.readlines():
+                                    term_file,value = re.split(':', line.rstrip('\n'), maxsplit=1)
+                                    if term == term_file:
+                                        print("Loading term %s into memory" % (term))
+                                        self.mem_index[term_file] = ast.literal_eval(value)
+
+            # This exception for the cases where the word wasnt indexed
+            try:
+                df = self.mem_index[term]['doc_freq']
+            except Exception:
+                print(term + " not found")
+                continue
 
             # calculate idf for each term
             idf = self.mem_index[term]['idf']
