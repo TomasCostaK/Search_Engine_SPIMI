@@ -1,7 +1,9 @@
 from numpy import cumsum
 from indexer import Indexer
 from tokenizer import Tokenizer
+from node import Node
 
+from heapq import heappop, heappush
 import sys
 import numpy as np
 import os
@@ -277,7 +279,7 @@ class Ranker:
                         memory_percentage_threshold = 75
                         if memory.percent > memory_percentage_threshold:
                             sorted_dicts = [ file_range[0] for file_range in sorted(self.mem_index.items(), key=lambda x: x[1]['count'])]
-                            print("Deleting %s to free up memory" % (f"{sorted_dicts[0]}.txt"))
+                            #print("Deleting %s to free up memory" % (f"{sorted_dicts[0]}.txt"))
                             # we discard the index of range of words with less usage
 
                             self.mem_index.pop(sorted_dicts[0])
@@ -288,7 +290,7 @@ class Ranker:
                         if memory.available - os.stat(self.index_directory + file).st_size > (memory_percentage_threshold/100 * memory.available):
                             #procurar dentro do ficheiro
                             with open(self.index_directory + file) as f:
-                                print("Loading %s into memory, for term: %s" % (file, term))
+                                #print("Loading %s into memory, for term: %s" % (file, term))
                                 for line in f.readlines():
                                     term_file,value = re.split(':', line.rstrip('\n'), maxsplit=1)
                                     # this helps prevent the reindexing of several words if an unknown word is asked for, made the given query 10x faster
@@ -343,18 +345,15 @@ class Ranker:
                     # Boosting is worth for 45% of the value
                     # not in the same document, we penalize by a fix amount, approx -*0.27
                     if [-1] in postings_lists:
-                        max_range = 50
-                        boost = self.calculate_boost(max_range) * .45
-                        print("Document: %s => %.2f boost" % (doc_id, boost))
+                        min_range = 50
+                        boost = self.calculate_boost(min_range) * .45
                         score += score*boost
                     else:
                         # do the math
-                        max_range = 3
-                        self.get_max_range(self,postings_lists)
-                        boost = self.calculate_boost(max_range) * .45
-                        print("Document: %s => %.2f boost" % (doc_id, boost))
-                        score += score*boost
-                    #print(terms_array[query_term_count])
+                        min_range = self.get_min_range(postings_lists)
+                        boost = self.calculate_boost(min_range) 
+                        if boost != None: 
+                            score += score*boost*.45
 
                 best_docs[doc_id] += idf * score 
 
@@ -373,19 +372,57 @@ class Ranker:
             postings_list.append(positions)
         return postings_list
 
-    def get_max_range(self, postings_lists):
-        # in case we cant find a range, we return to the default value
-        max_range = 50
-        for posting_list in postings_lists:
-            pass
-        return max_range
+    # Getting the min_range in optimal time was being a problem, so I found some help online with O(nlog(m)) complex: https://www.techiedelight.com/find-smallest-range-least-one-element-given-lists/
+    def get_min_range(self, list):
+        #  high will be maximum element in the heap
+        high = float('-inf')
     
-    def calculate_boost(self, max_range):
+        # stores minimum and maximum element found so far in heap
+        p = (0, float('inf'))
+    
+        # create an empty min-heap
+        pq = []
+
+        # push first element of each list into the min-heap
+        # along with list number and their index in the list
+        for i in range(len(list)):
+            heappush(pq, Node(list[i][0], i, 0))
+            high = max(high, list[i][0])
+    
+        # run till end of any list is not reached
+        while True:
+    
+            # remove root node
+            top = heappop(pq)
+    
+            # retrieve root node information from the min-heap
+            low = top.elem_value
+            i = top.list_number
+            j = top.column_number
+    
+            # update low, high if new min is found
+            if high - low < p[1] - p[0]:
+                p = (low, high)
+    
+            # return on reaching the end of any list
+            if j == len(list[i]) - 1:
+                min_range = p[1]-p[0]
+                return min_range
+    
+            # take next element from "same" list and
+            # insert it into the min-heap
+            heappush(pq, Node(list[i][j + 1], i, j + 1))
+    
+            # update high if new element is greater
+            high = max(high, list[i][j + 1])
+
+    
+    def calculate_boost(self, min_range):
         #returns the boosting, could be negative or positive, rewards close words
-        #logbase(1/2)(max_range -2.85) + 3
-        if max_range < 2:
+        #logbase(1/2)(min_range -2.85) + 3
+        if min_range < 2:
             return 0
-        return math.log( max_range-1.85 , 1/2) + 5 # these values were fine tuned using wolframalpha
+        return math.log( min_range-1.85 , 1/2) + 5 # these values were fine tuned using wolframalpha
 
 
 
