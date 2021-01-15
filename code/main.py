@@ -186,6 +186,3 @@ if __name__ == "__main__":
     tic = time.time()
     rtli.rank(analyze_table, tokenizer_mode, positional_flag)
     print("Time Ranking: ", time.time()-tic)
-
-    #work nº3 calls
-    #rtli.write_index_file()

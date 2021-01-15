@@ -19,8 +19,14 @@ You need to install the requirements with pip:
 ```
 
 ## Example run
+First time: (for cleaning the hidden indexes)  
 ```python
     cd code
+    python3 main.py -c 10000 -t complex -r bm25 -a -p -z
+```
+
+Next times: (fetches previously indexed values) 
+```python
     python3 main.py -c 10000 -t complex -r bm25 -a -p
 ```
 ### Usage 

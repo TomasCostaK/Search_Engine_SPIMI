@@ -130,6 +130,13 @@ class Ranker:
         # Special call to indexer, so we can access the term frequency, making use of modularization
         indexed_query = self.indexer.index_query(self.tokenizer.tokenize(query,-1))
 
+        # positional index searching
+        position_boost = False
+        
+        if positional_flag:
+            terms_array = list(indexed_query.keys())
+            query_term_count = 1
+
         for term,tf_query in indexed_query.items():
             #special treatment, weights at 0
 
@@ -205,6 +212,13 @@ class Ranker:
 
             weight_query_term = tf_weight * idf #this is the weight for the term in the query
 
+            # positional index dealing
+            if positional_flag:
+                if query_term_count == len(terms_array):
+                    position_boost = True
+                else:
+                    query_term_count += 1
+
             # now we iterate over every term
             for doc_id, doc_id_dict in self.mem_index[correct_file]['index'][term]['doc_ids'].items():
                 tf_doc = doc_id_dict['weight']
@@ -214,6 +228,22 @@ class Ranker:
                 #self.doc_pow[doc_id] += tf_doc_weight ** 2
 
                 score = (weight_query_term * tf_doc_weight)
+                
+                # only boost with positional on the last element, then look at all array
+                if position_boost:
+                    postings_lists = self.get_postings(terms_array, doc_id) # returns an array of postings lists, given all terms of the array
+                    # Boosting is worth for 45% of the value
+                    # not in the same document, we penalize by a fix amount, approx -*0.27
+                    if [-1] in postings_lists:
+                        min_range = 50
+                        boost = self.calculate_boost(min_range) * .45
+                        score += score*boost
+                    else:
+                        # do the math
+                        min_range = self.get_min_range(postings_lists)
+                        boost = self.calculate_boost(min_range) 
+                        if boost != None: 
+                            score += score*boost*.45
                 best_docs[doc_id] += score
 
 
@@ -258,8 +288,6 @@ class Ranker:
 
         for term,tf_query in indexed_query.items():
             #special treatment, weights at 0
-
-            #lista = [ (termo_inicial, termo_final, {a: doc_ids, b: doc_ids}, count_used) , ... ]
             
             # Only goes searching in term if not already in memory
             correct_file = self.return_file_range(term)

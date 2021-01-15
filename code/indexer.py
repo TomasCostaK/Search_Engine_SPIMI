@@ -216,14 +216,18 @@ class Indexer:
         
         # Write the rest of the dict to disk
         self.write_partition_index(mem_used)
+        self.append_final_partition()
 
     def write_partition_index(self, mem_used):
         ordered_dict = sorted(self.temp_index.items(), key = lambda kv: kv[0])
         smallest_word = ordered_dict[0][0]
         highest_word = ordered_dict[-1][0]
+        #f_append=open("../output/indexed_map.txt", "a+")
         with open(f"{self.index_directory}{smallest_word}_{highest_word}.txt",'w+') as f:
             for word, value in ordered_dict:
                 string = f"{word}:{str(value)}\n"
                 f.write(string)
+                #f_append.write(string)
         self.temp_index = {}
         f.close()
+        #f_append.close()
