@@ -19,7 +19,7 @@ Tomás Costa - 89016
 """
 
 class RTLI:  # Reader, tokenizer, linguistic, indexer
-    def __init__(self, tokenizer_mode, file='../content/metadata_medium.csv', stopwords_file="../content/snowball_stopwords_EN.txt", chunksize=10000, queries_path='../content/queries.txt' ,rank_mode='bm25', docs_limit=50, positional_flag=False):
+    def __init__(self, tokenizer_mode, file='../content/metadata.csv', stopwords_file="../content/snowball_stopwords_EN.txt", chunksize=10000, queries_path='../content/queries.txt' ,rank_mode='bm25', docs_limit=50, positional_flag=False):
         self.tokenizer = Tokenizer(tokenizer_mode, stopwords_file)
         self.indexer = Indexer(positional_flag=positional_flag)
         self.ranker = Ranker(queries_path=queries_path ,mode=rank_mode,docs_limit=docs_limit)
