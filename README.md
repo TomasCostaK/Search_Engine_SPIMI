@@ -9,6 +9,9 @@ You need to install the requirements with pip:
     pip install -r requirements.txt
 ```
 
+To test with a larger dataset, you must also change the file in content/metadata.csv to the one you desire. 
+Since the upload limit is 50Mb, the metadata included couldnt be too large
+
 ### Dataset
 	https://ai2-semanticscholar-cord-19.s3-us-west-2.amazonaws.com/2020-12-01/metadata.csv
 
