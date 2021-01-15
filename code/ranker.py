@@ -248,7 +248,8 @@ class Ranker:
         indexed_query = self.indexer.index_query(self.tokenizer.tokenize(query,-1))
         
         # positional index searching
-        previous_position = None
+        position_boost = False
+        
         if positional_flag:
             terms_array = list(indexed_query.keys())
             query_term_count = 1
@@ -332,7 +333,6 @@ class Ranker:
             
             # now we iterate over every term
             for doc_id, doc_id_dict in self.mem_index[correct_file]['index'][term]['doc_ids'].items():
-
                 tf_doc = doc_id_dict['weight']
                 dl = self.docs_length[doc_id]
                 score = self.calculate_BM25(df, dl, self.avdl, tf_doc)
@@ -340,10 +340,25 @@ class Ranker:
 
                 # only boost with positional on the last element, then look at all array
                 if position_boost:
-                    print(terms_array[query_term_count-1])
+                    postings_lists = self.get_postings(terms_array, doc_id) # returns an array of postings lists, given all terms of the array
+                    #print(terms_array[query_term_count])
         
         most_relevant_docs = sorted(best_docs.items(), key=lambda x: x[1], reverse=True)
         return most_relevant_docs[:self.docs_limit]
+
+    def get_postings(self, terms, doc_id):
+        postings_list = []
+        print(doc_id)
+        for term in terms:
+            given_file = self.return_file_range(term)
+            try:
+                positions = self.mem_index[given_file]['index'][term]['doc_ids'][doc_id]['positions']
+                print("%s, positions: %s" % (term, positions))
+            except KeyError:
+                print("%s, positions: NaN" % (term))
+                continue
+        
+        return postings_list
 
     # auxiliary function to calculate bm25 formula
     def calculate_BM25(self, df, dl, avdl, tf_doc):
