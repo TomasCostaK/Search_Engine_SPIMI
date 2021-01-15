@@ -131,17 +131,80 @@ class Ranker:
         for term,tf_query in indexed_query.items():
             #special treatment, weights at 0
 
-            for file in os.listdir(self.index_directory):
-                print("Term: %s, file: %s" % (term, file))
+            #lista = [ (termo_inicial, termo_final, {a: doc_ids, b: doc_ids}, count_used) , ... ]
+            
+            # Only goes searching in term if not already in memory
+            correct_file = self.return_file_range(term)
+
+            if correct_file == None:
+                for file in os.listdir(self.index_directory):
+                    # here we get the range in which the word should be located
+                    file_range = file.split('.')[0]
+                    smallest_word, highest_word = file_range.split('_')
+                    if term <= highest_word and term >= smallest_word:
+                    
+                        # check if we have memory for loading whole file
+                        memory = psutil.virtual_memory()
+                        
+                        # term isnt indexed and we should remove some opened files
+                        # here we will discard the least used range of words if less than 75% of memory is available
+                        memory_percentage_threshold = 75
+                        if memory.percent > memory_percentage_threshold:
+                            sorted_dicts = [ file_range[0] for file_range in sorted(self.mem_index.items(), key=lambda x: x[1]['count'])]
+                            #print("Deleting %s to free up memory" % (f"{sorted_dicts[0]}.txt"))
+                            # we discard the index of range of words with less usage
+
+                            self.mem_index.pop(sorted_dicts[0])
+                            # see what the memory is like now
+                            memory = psutil.virtual_memory()
+
+                        # if we can load the file without it ocupying more than the set threshold
+                        if memory.available - os.stat(self.index_directory + file).st_size > (memory_percentage_threshold/100 * memory.available):
+                            #procurar dentro do ficheiro
+                            with open(self.index_directory + file) as f:
+                                #print("Loading %s into memory, for term: %s" % (file, term))
+                                for line in f.readlines():
+                                    term_file,value = re.split(':', line.rstrip('\n'), maxsplit=1)
+                                    # this helps prevent the reindexing of several words if an unknown word is asked for, made the given query 10x faster
+                                    if file_range not in self.mem_index.keys():
+                                        self.mem_index[file_range] = {'count':0, 'index': {}}
+                                    self.mem_index[file_range]['index'][term_file] = ast.literal_eval(value)
+                            # we have the indexing we were looking for
+                            break
+
+                        # if we cant load the whole file, we only load the index
+                        else:
+                            with open(self.index_directory + file) as f:
+                                for line in f.readlines():
+                                    term_file,value = re.split(':', line.rstrip('\n'), maxsplit=1)
+                                    if term == term_file:
+                                        if file_range not in self.mem_index.keys():
+                                            self.mem_index[file_range] = {'count':0, 'index': {}}
+                                        self.mem_index[file_range]['index'][term_file] = ast.literal_eval(value)
+                                    
+                                        # we have the indexing we were looking for
+                                        break
+            
+            # now we should have the right value
+            correct_file = self.return_file_range(term)
+            # This exception for the cases where the word wasnt indexed
+            try:
+                df = self.mem_index[correct_file]['index'][term]['doc_freq']
+                self.mem_index[correct_file]['count'] += 1
+            except Exception:
+                #print(term + " not found")
+                continue
+
+            # calculate idf for each term
+            idf = self.mem_index[correct_file]['index'][term]['idf']
             
             tf_weight = math.log10(tf_query) + 1
-            df = self.indexed_map[term]['doc_freq']
-            idf = self.indexed_map[term]['idf']
+            df = self.mem_index[correct_file]['index'][term]['doc_freq']
 
             weight_query_term = tf_weight * idf #this is the weight for the term in the query
 
             # now we iterate over every term
-            for doc_id, doc_id_dict in self.indexed_map[term]['doc_ids'].items():
+            for doc_id, doc_id_dict in self.mem_index[correct_file]['index'][term]['doc_ids'].items():
                 tf_doc = doc_id_dict['weight']
                 tf_doc_weight = math.log10(tf_doc) + 1
                 
@@ -150,6 +213,7 @@ class Ranker:
 
                 score = (weight_query_term * tf_doc_weight)
                 best_docs[doc_id] += score
+
 
         #normalize after each term
         #for doc_id, score in best_docs.items():
@@ -206,7 +270,7 @@ class Ranker:
                         memory_percentage_threshold = 75
                         if memory.percent > memory_percentage_threshold:
                             sorted_dicts = [ file_range[0] for file_range in sorted(self.mem_index.items(), key=lambda x: x[1]['count'])]
-                            print("Deleting %s to free up memory" % (f"{sorted_dicts[0]}.txt"))
+                            #print("Deleting %s to free up memory" % (f"{sorted_dicts[0]}.txt"))
                             # we discard the index of range of words with less usage
 
                             self.mem_index.pop(sorted_dicts[0])
@@ -217,7 +281,7 @@ class Ranker:
                         if memory.available - os.stat(self.index_directory + file).st_size > (memory_percentage_threshold/100 * memory.available):
                             #procurar dentro do ficheiro
                             with open(self.index_directory + file) as f:
-                                print("Loading %s into memory, for term: %s" % (file, term))
+                                #print("Loading %s into memory, for term: %s" % (file, term))
                                 for line in f.readlines():
                                     term_file,value = re.split(':', line.rstrip('\n'), maxsplit=1)
                                     # this helps prevent the reindexing of several words if an unknown word is asked for, made the given query 10x faster
@@ -247,7 +311,7 @@ class Ranker:
                 df = self.mem_index[correct_file]['index'][term]['doc_freq']
                 self.mem_index[correct_file]['count'] += 1
             except Exception:
-                print(term + " not found")
+                #print(term + " not found")
                 continue
 
             # calculate idf for each term
