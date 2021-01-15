@@ -92,9 +92,9 @@ class RTLI:  # Reader, tokenizer, linguistic, indexer
         # Here we start evaluating by reading the several index in files
         #self.indexed_map = self.indexer.getIndexed()
 
-    def rank(self, analyze_table, tokenizer_mode):
+    def rank(self, analyze_table, tokenizer_mode, positional_flag):
         self.ranker.update(self.docs_length, self.collection_size,  tokenizer_mode, "../content/snowball_stopwords_EN.txt")
-        self.ranker.process_queries(analyze_table=analyze_table)
+        self.ranker.process_queries(analyze_table=analyze_table, positional_flag=positional_flag)
 
     def write_index_file(self):
         self.indexer.write_index_file()
@@ -184,7 +184,7 @@ if __name__ == "__main__":
 
     # work nº2 calls
     tic = time.time()
-    rtli.rank(analyze_table, tokenizer_mode)
+    rtli.rank(analyze_table, tokenizer_mode, positional_flag)
     print("Time Ranking: ", time.time()-tic)
 
     #work nº3 calls

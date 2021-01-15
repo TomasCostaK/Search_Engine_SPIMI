@@ -71,7 +71,7 @@ class Ranker:
         #update documents length
         self.avdl = sum([ value for key,value in self.docs_length.items()]) / self.collection_size
    
-    def process_queries(self, analyze_table=True):
+    def process_queries(self, analyze_table=True, positional_flag=False):
         #Show results for ranking
         with open(self.queries_path,'r') as f:
             query_n = 1
@@ -81,9 +81,9 @@ class Ranker:
                 tic = time.time()
                 
                 if self.mode == 'tf_idf':
-                    best_docs = self.rank_tf_idf(query)
+                    best_docs = self.rank_tf_idf(query, positional_flag)
                 elif self.mode == 'bm25':
-                    best_docs = self.rank_bm25(query)
+                    best_docs = self.rank_bm25(query, positional_flag)
                 else:
                     usage()
                     sys.exit(1)
@@ -120,7 +120,7 @@ class Ranker:
     def queries_results(self):
         print("  \t\tPrecision \t\t Recall  	\tF-measure     \tAverage Precision \tNDCG \t\t\t Latency\nQuery #	@10	@20	@50	@10	@20	@50	@10	@20	@50	@10	@20	@50	@10	@20	@50")
 
-    def rank_tf_idf(self, query):
+    def rank_tf_idf(self, query, positional_flag):
         # declaration of vars to be used in tf.idf
         best_docs = collections.defaultdict(lambda: 0) # default start at 0 so we can do cumulative gains
         N = self.collection_size
@@ -239,13 +239,19 @@ class Ranker:
         except Exception:
             return None
 
-    def rank_bm25(self, query):
+    def rank_bm25(self, query, positional_flag):
         # declaration of vars to be used in tf.idf
         best_docs = collections.defaultdict(lambda: 0) # default start at 0 so we can do cumulative gains
         N = self.collection_size
 
         # Special call to indexer, so we can access the term frequency, making use of modularization
         indexed_query = self.indexer.index_query(self.tokenizer.tokenize(query,-1))
+        
+        # positional index searching
+        previous_position = None
+        if positional_flag:
+            terms_array = list(indexed_query.keys())
+            query_term_count = 1
 
         for term,tf_query in indexed_query.items():
             #special treatment, weights at 0
@@ -270,7 +276,7 @@ class Ranker:
                         memory_percentage_threshold = 75
                         if memory.percent > memory_percentage_threshold:
                             sorted_dicts = [ file_range[0] for file_range in sorted(self.mem_index.items(), key=lambda x: x[1]['count'])]
-                            #print("Deleting %s to free up memory" % (f"{sorted_dicts[0]}.txt"))
+                            print("Deleting %s to free up memory" % (f"{sorted_dicts[0]}.txt"))
                             # we discard the index of range of words with less usage
 
                             self.mem_index.pop(sorted_dicts[0])
@@ -281,7 +287,7 @@ class Ranker:
                         if memory.available - os.stat(self.index_directory + file).st_size > (memory_percentage_threshold/100 * memory.available):
                             #procurar dentro do ficheiro
                             with open(self.index_directory + file) as f:
-                                #print("Loading %s into memory, for term: %s" % (file, term))
+                                print("Loading %s into memory, for term: %s" % (file, term))
                                 for line in f.readlines():
                                     term_file,value = re.split(':', line.rstrip('\n'), maxsplit=1)
                                     # this helps prevent the reindexing of several words if an unknown word is asked for, made the given query 10x faster
@@ -317,12 +323,24 @@ class Ranker:
             # calculate idf for each term
             idf = self.mem_index[correct_file]['index'][term]['idf']
 
+            # positional index dealing
+            if positional_flag:
+                if query_term_count == len(terms_array):
+                    position_boost = True
+                else:
+                    query_term_count += 1
+            
             # now we iterate over every term
             for doc_id, doc_id_dict in self.mem_index[correct_file]['index'][term]['doc_ids'].items():
+
                 tf_doc = doc_id_dict['weight']
                 dl = self.docs_length[doc_id]
                 score = self.calculate_BM25(df, dl, self.avdl, tf_doc)
                 best_docs[doc_id] += idf * score 
+
+                # only boost with positional on the last element, then look at all array
+                if position_boost:
+                    print(terms_array[query_term_count-1])
         
         most_relevant_docs = sorted(best_docs.items(), key=lambda x: x[1], reverse=True)
         return most_relevant_docs[:self.docs_limit]
