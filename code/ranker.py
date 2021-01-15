@@ -336,29 +336,58 @@ class Ranker:
                 tf_doc = doc_id_dict['weight']
                 dl = self.docs_length[doc_id]
                 score = self.calculate_BM25(df, dl, self.avdl, tf_doc)
-                best_docs[doc_id] += idf * score 
 
                 # only boost with positional on the last element, then look at all array
                 if position_boost:
                     postings_lists = self.get_postings(terms_array, doc_id) # returns an array of postings lists, given all terms of the array
+                    # Boosting is worth for 45% of the value
+                    # not in the same document, we penalize by a fix amount, approx -*0.27
+                    if [-1] in postings_lists:
+                        max_range = 50
+                        boost = self.calculate_boost(max_range) * .45
+                        print("Document: %s => %.2f boost" % (doc_id, boost))
+                        score += score*boost
+                    else:
+                        # do the math
+                        max_range = 3
+                        self.get_max_range(self,postings_lists)
+                        boost = self.calculate_boost(max_range) * .45
+                        print("Document: %s => %.2f boost" % (doc_id, boost))
+                        score += score*boost
                     #print(terms_array[query_term_count])
+
+                best_docs[doc_id] += idf * score 
+
         
         most_relevant_docs = sorted(best_docs.items(), key=lambda x: x[1], reverse=True)
         return most_relevant_docs[:self.docs_limit]
 
     def get_postings(self, terms, doc_id):
         postings_list = []
-        print(doc_id)
         for term in terms:
             given_file = self.return_file_range(term)
             try:
                 positions = self.mem_index[given_file]['index'][term]['doc_ids'][doc_id]['positions']
-                print("%s, positions: %s" % (term, positions))
             except KeyError:
-                print("%s, positions: NaN" % (term))
-                continue
-        
+                positions = [-1]
+            postings_list.append(positions)
         return postings_list
+
+    def get_max_range(self, postings_lists):
+        # in case we cant find a range, we return to the default value
+        max_range = 50
+        for posting_list in postings_lists:
+            pass
+        return max_range
+    
+    def calculate_boost(self, max_range):
+        #returns the boosting, could be negative or positive, rewards close words
+        #logbase(1/2)(max_range -2.85) + 3
+        if max_range < 2:
+            return 0
+        return math.log( max_range-1.85 , 1/2) + 5 # these values were fine tuned using wolframalpha
+
+
 
     # auxiliary function to calculate bm25 formula
     def calculate_BM25(self, df, dl, avdl, tf_doc):
